@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Talk2Books 📚 | Multilingual RAG</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <h1>📖 Talk2Books</h1>
+
+    <!-- Step 1: Upload Section -->
+    <div id="upload-section">
+      <h3>Step 1️⃣ — Upload up to 5 files</h3>
+      <input type="file" id="fileInput" multiple accept=".txt,.pdf,.docx" />
+      <button onclick="uploadFiles()">Upload</button>
+      <p id="uploadStatus"></p>
+    </div>
+
+    <!-- Step 2: Language Selection -->
+    <div id="lang-section" style="display:none;">
+      <h3>Step 2️⃣ — Choose Languages</h3>
+      <label>Question Language:</label>
+      <select id="questionLang">
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="pa">Punjabi</option>
+      </select>
+
+      <label>Answer Language:</label>
+      <select id="answerLang">
+        <option value="en">English</option>
+        <option value="hi">Hindi</option>
+        <option value="pa">Punjabi</option>
+      </select>
+    </div>
+
+    <!-- Step 3: Ask Question -->
+    <div id="chat-section" style="display:none;">
+      <h3>Step 3️⃣ — Ask Your Question</h3>
+      <textarea id="question" placeholder="Type your question..." rows="3"></textarea>
+      <button onclick="askQuestion()">Ask</button>
+      <div id="response"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

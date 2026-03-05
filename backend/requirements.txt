@@ -1,0 +1,37 @@
+# === Core server ===
+quart==0.19.5
+quart-cors==0.7.0
+hypercorn==0.16.0
+
+# === LangChain ecosystem (stable combo) ===
+langchain==0.3.10
+langchain-core==0.3.26
+langchain-community==0.3.9
+langchain-text-splitters==0.3.1
+langchain-huggingface==0.1.0
+langchain-ollama==0.2.0
+
+# === Embeddings and vector stores ===
+faiss-cpu==1.9.0.post1
+sentence-transformers==3.1.1
+transformers==4.45.1
+torch==2.9.1
+numpy==1.26.4
+
+# === Translation and language detection ===
+deep-translator==1.11.4
+langdetect==1.0.9
+
+# === Document loaders ===
+PyMuPDF==1.26.6
+python-docx==1.1.2
+docx2txt==0.8
+
+# === Utilities ===
+tqdm==4.66.5
+requests==2.32.3
+pydantic==2.8.2
+typing-extensions==4.12.2
+aiofiles==24.1.0
+colorama==0.4.6
+psutil==6.0.0
