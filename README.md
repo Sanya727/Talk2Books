@@ -1,4 +1,4 @@
-# 📚 Talk2Books – Multilingual RAG System
+# Talk2Books – Multilingual RAG System
 
 Talk2Books is a **Retrieval-Augmented Generation (RAG)** based question answering system that allows users to upload documents and ask questions in **multiple languages**.
 
