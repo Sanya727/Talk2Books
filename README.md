@@ -8,7 +8,7 @@ The system retrieves relevant document chunks using **FAISS vector search** and 
 
 # Features
 
--  Upload documents (.txt, .pdf, .docx)
+-  Upload documents (.txt)
 -  Ask questions in multiple languages
   - English
   - Hindi
