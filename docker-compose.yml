@@ -1,0 +1,24 @@
+version: "3.9"
+
+services:
+
+  backend:
+    build: .
+    container_name: talk2books_backend
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app/backend
+    depends_on:
+      - ollama
+
+  ollama:
+    image: ollama/ollama
+    container_name: talk2books_ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+
+volumes:
+  ollama_data:
