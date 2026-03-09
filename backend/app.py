@@ -7,11 +7,20 @@ from quart_cors import cors
 from loaders import load_documents
 from rag_chain import build_vector_store, answer_question
 
+from speech.stt import speech_to_text
+from speech.tts import text_to_speech
+
 app = Quart(__name__)
 app = cors(app, allow_origin="*")
 
 UPLOAD_FOLDER = "sample_docs"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+from quart import send_from_directory
+
+@app.route("/audio/<filename>")
+async def serve_audio(filename):
+    return await send_from_directory(UPLOAD_FOLDER, filename)
 
 VECTOR_STORE_READY = False
 
@@ -25,7 +34,7 @@ async def upload_files():
     if not form:
         return jsonify({"error": "No files uploaded"}), 400
 
-    # ✅ Ensure folder exists (DO NOT DELETE)
+    # Ensure folder exists (DO NOT DELETE)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
     saved_files = []
@@ -36,7 +45,7 @@ async def upload_files():
 
             filepath = os.path.join(UPLOAD_FOLDER, file.filename)
 
-            # ✅ overwrite if file already exists
+            # overwrite if file already exists
             if os.path.exists(filepath):
                 os.remove(filepath)
 
@@ -64,11 +73,12 @@ async def upload_files():
 
 @app.route("/ask", methods=["POST"])
 async def ask_question():
-    """Handle multilingual questions."""
+
     if not VECTOR_STORE_READY:
         return jsonify({"error": "Please upload files first"}), 400
 
     data = await request.get_json()
+
     question = data.get("question")
     question_lang = data.get("question_lang", "en").lower().strip()
     answer_lang = data.get("answer_lang", "en").lower().strip()
@@ -76,16 +86,61 @@ async def ask_question():
     if not question:
         return jsonify({"error": "Question is required"}), 400
 
-    print(f"🈶 Received question: {question} | QLang: {question_lang} | ALang: {answer_lang}")
+    print(f"Received question: {question} | QLang: {question_lang} | ALang: {answer_lang}")
 
-    # Call RAG pipeline with both language parameters
     result = answer_question(question, question_lang, answer_lang)
 
-    # Ensure JSON structure
-    if isinstance(result, dict):
-        return jsonify(result)
-    else:
-        return jsonify({"answer": result})
+    answer_text = result["answer"]
+
+    audio_file = text_to_speech(answer_text, answer_lang)
+
+    return jsonify({
+        "answer": answer_text,
+        "source": result["source"],
+        "audio_file": audio_file
+    })
+
+@app.route("/ask-voice", methods=["POST"])
+async def ask_voice():
+
+    if not VECTOR_STORE_READY:
+        return jsonify({"error": "Please upload files first"}), 400
+
+    form = await request.form
+    files = await request.files
+
+    question_lang = form.get("question_lang", "en").lower().strip()
+    answer_lang = form.get("answer_lang", "en").lower().strip()
+
+    if "audio" not in files:
+        return jsonify({"error": "Audio file missing"}), 400
+
+    audio = files["audio"]
+
+    audio_path = os.path.join(UPLOAD_FOLDER, "voice_question.wav")
+
+    await audio.save(audio_path)
+
+    print("🎤 Received voice question")
+
+    question_text = speech_to_text(audio_path)
+
+    print("🗣 Transcribed question:", question_text)
+
+    result = answer_question(question_text, question_lang, answer_lang)
+
+    answer_text = result["answer"]
+
+    audio_file = text_to_speech(answer_text, answer_lang)
+
+    return jsonify({
+        "question": question_text,
+        "answer": answer_text,
+        "source": result["source"],
+        "audio_file": audio_file
+    })
+
+
 
 
 @app.route("/cleanup", methods=["POST"])
@@ -120,5 +175,5 @@ atexit.register(auto_cleanup)
 
 
 if __name__ == "__main__":
-    print("🚀 Starting Talk2Books backend (multi-language, temp session mode)...")
+    print("Starting Talk2Books backend (multi-language, temp session mode)...")
     app.run(host="0.0.0.0", port=5000)
