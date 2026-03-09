@@ -1,54 +1,135 @@
 import os
-from langdetect import detect
-from langchain_community.document_loaders import TextLoader, PyMuPDFLoader, Docx2txtLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_core.documents import Document
+import fitz
+import pytesseract
+import cv2
+from PIL import Image
 
-# ✅ Function: detect language safely
-def detect_language_safe(text):
+from docx import Document
+from pptx import Presentation
+
+from langchain_core.documents import Document as LCDocument
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langdetect import detect
+
+import pytesseract
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+
+def detect_lang(text):
     try:
         return detect(text)
     except:
         return "unknown"
 
-# ✅ Function: load and chunk all supported documents
-def load_documents(folder_path: str):
-    all_docs = []
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
 
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
-        if not os.path.isfile(file_path):
-            continue
+def extract_pdf(path):
 
-        # Load based on extension
-        if file_name.lower().endswith(".txt"):
-            loader = TextLoader(file_path, encoding="utf-8")
-        elif file_name.lower().endswith(".pdf"):
-            loader = PyMuPDFLoader(file_path)
-        elif file_name.lower().endswith(".docx"):
-            loader = Docx2txtLoader(file_path)
+    doc = fitz.open(path)
+
+    text = ""
+
+    for page in doc:
+
+        text += page.get_text()
+
+        images = page.get_images(full=True)
+
+        for img in images:
+
+            xref = img[0]
+
+            base = doc.extract_image(xref)
+
+            img_bytes = base["image"]
+
+            img_name = f"temp_{xref}.png"
+
+            with open(img_name, "wb") as f:
+                f.write(img_bytes)
+
+            img = cv2.imread(img_name)
+
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+            ocr = pytesseract.image_to_string(gray)
+
+            text += "\n" + ocr
+
+            os.remove(img_name)
+
+    return text
+
+
+def extract_docx(path):
+
+    doc = Document(path)
+
+    text = ""
+
+    for p in doc.paragraphs:
+        text += p.text + "\n"
+
+    return text
+
+
+def extract_ppt(path):
+
+    prs = Presentation(path)
+
+    text = ""
+
+    for slide in prs.slides:
+
+        for shape in slide.shapes:
+
+            if hasattr(shape, "text"):
+                text += shape.text + "\n"
+
+    return text
+
+
+def load_documents(folder):
+
+    docs = []
+
+    splitter = RecursiveCharacterTextSplitter(
+        chunk_size=800,
+        chunk_overlap=100
+    )
+
+    for file in os.listdir(folder):
+
+        path = os.path.join(folder, file)
+
+        if file.endswith(".txt"):
+            text = open(path, encoding="utf-8").read()
+
+        elif file.endswith(".pdf"):
+            text = extract_pdf(path)
+
+        elif file.endswith(".docx"):
+            text = extract_docx(path)
+
+        elif file.endswith(".pptx"):
+            text = extract_ppt(path)
+
         else:
-            print(f"⚠️ Skipping unsupported file: {file_name}")
             continue
 
-        try:
-            docs = loader.load()
-        except Exception as e:
-            print(f"❌ Error loading {file_name}: {e}")
-            continue
+        lang = detect_lang(text)
 
-        # Split into chunks
-        split_docs = text_splitter.split_documents(docs)
+        chunks = splitter.split_text(text)
 
-        # Detect language for metadata
-        for d in split_docs:
-            lang = detect_language_safe(d.page_content)
-            d.metadata["language"] = lang
-            d.metadata["source"] = file_name
+        for c in chunks:
 
-        print(f"✅ Processed {file_name} | Detected language: {lang} | Chunks: {len(split_docs)}")
-        all_docs.extend(split_docs)
+            docs.append(
+                LCDocument(
+                    page_content=c,
+                    metadata={
+                        "source": file,
+                        "language": lang
+                    }
+                )
+            )
 
-    print(f"\n📚 Total document chunks loaded: {len(all_docs)}")
-    return all_docs
+    return docs

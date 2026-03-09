@@ -1,7 +1,7 @@
 import os
 import shutil
 import atexit
-from quart import Quart, request, jsonify
+from quart import Quart, request, jsonify, send_from_directory
 from quart_cors import cors
 
 from loaders import load_documents
@@ -16,83 +16,77 @@ app = cors(app, allow_origin="*")
 UPLOAD_FOLDER = "sample_docs"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-from quart import send_from_directory
+VECTOR_READY = False
+
+ALLOWED_TYPES = (".txt", ".pdf", ".docx", ".pptx")
+
 
 @app.route("/audio/<filename>")
 async def serve_audio(filename):
     return await send_from_directory(UPLOAD_FOLDER, filename)
 
-VECTOR_STORE_READY = False
-
 
 @app.route("/upload", methods=["POST"])
 async def upload_files():
-    """Upload up to 5 .txt files and rebuild FAISS vector store."""
 
     form = await request.files
 
     if not form:
         return jsonify({"error": "No files uploaded"}), 400
 
-    # Ensure folder exists (DO NOT DELETE)
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+    # SAFE CLEANUP
+    for f in os.listdir(UPLOAD_FOLDER):
+        try:
+            os.remove(os.path.join(UPLOAD_FOLDER, f))
+        except:
+            pass
 
     saved_files = []
 
     for key, file in form.items():
-
-        if file.filename.endswith(".txt"):
-
-            filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-
-            # overwrite if file already exists
-            if os.path.exists(filepath):
-                os.remove(filepath)
-
-            await file.save(filepath)
-
-            saved_files.append(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
+        await file.save(filepath)
+        saved_files.append(file.filename)
 
     if not saved_files:
-        return jsonify({"error": "No valid .txt files uploaded"}), 400
+        return jsonify({"error": "No valid files uploaded"}), 400
 
     docs = load_documents(UPLOAD_FOLDER)
 
     if not docs:
-        return jsonify({"error": "No readable text content found"}), 400
+        return jsonify({"error": "No readable data found"}), 400
 
     build_vector_store(docs)
 
-    global VECTOR_STORE_READY
-    VECTOR_STORE_READY = True
+    global VECTOR_READY
+    VECTOR_READY = True
 
     return jsonify({
-        "message": f"Uploaded {len(saved_files)} files successfully!",
+        "message": "Files processed successfully",
         "files": saved_files
     })
 
-@app.route("/ask", methods=["POST"])
-async def ask_question():
 
-    if not VECTOR_STORE_READY:
-        return jsonify({"error": "Please upload files first"}), 400
+@app.route("/ask", methods=["POST"])
+async def ask():
+
+    if not VECTOR_READY:
+        return jsonify({"error": "Upload files first"}), 400
 
     data = await request.get_json()
 
     question = data.get("question")
-    question_lang = data.get("question_lang", "en").lower().strip()
-    answer_lang = data.get("answer_lang", "en").lower().strip()
 
-    if not question:
-        return jsonify({"error": "Question is required"}), 400
+    q_lang = data.get("question_lang", "en")
+    a_lang = data.get("answer_lang", "en")
 
-    print(f"Received question: {question} | QLang: {question_lang} | ALang: {answer_lang}")
-
-    result = answer_question(question, question_lang, answer_lang)
+    result = answer_question(question, q_lang, a_lang)
 
     answer_text = result["answer"]
 
-    audio_file = text_to_speech(answer_text, answer_lang)
+    audio_file = text_to_speech(answer_text, a_lang)
 
     return jsonify({
         "answer": answer_text,
@@ -100,20 +94,21 @@ async def ask_question():
         "audio_file": audio_file
     })
 
+
 @app.route("/ask-voice", methods=["POST"])
 async def ask_voice():
 
-    if not VECTOR_STORE_READY:
-        return jsonify({"error": "Please upload files first"}), 400
+    if not VECTOR_READY:
+        return jsonify({"error": "Upload files first"}), 400
 
     form = await request.form
     files = await request.files
 
-    question_lang = form.get("question_lang", "en").lower().strip()
-    answer_lang = form.get("answer_lang", "en").lower().strip()
+    q_lang = form.get("question_lang", "en")
+    a_lang = form.get("answer_lang", "en")
 
     if "audio" not in files:
-        return jsonify({"error": "Audio file missing"}), 400
+        return jsonify({"error": "Audio missing"}), 400
 
     audio = files["audio"]
 
@@ -121,17 +116,17 @@ async def ask_voice():
 
     await audio.save(audio_path)
 
-    print("🎤 Received voice question")
+    print("Voice question received")
 
     question_text = speech_to_text(audio_path)
 
-    print("🗣 Transcribed question:", question_text)
+    print("Transcribed:", question_text)
 
-    result = answer_question(question_text, question_lang, answer_lang)
+    result = answer_question(question_text, q_lang, a_lang)
 
     answer_text = result["answer"]
 
-    audio_file = text_to_speech(answer_text, answer_lang)
+    audio_file = text_to_speech(answer_text, a_lang)
 
     return jsonify({
         "question": question_text,
@@ -141,39 +136,34 @@ async def ask_voice():
     })
 
 
-
-
 @app.route("/cleanup", methods=["POST"])
-async def cleanup_files():
-    """Manual cleanup triggered from frontend."""
-    try:
-        if os.path.exists(UPLOAD_FOLDER):
-            shutil.rmtree(UPLOAD_FOLDER)
-        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+async def cleanup():
 
-        if os.path.exists("faiss_multilang_index"):
-            shutil.rmtree("faiss_multilang_index")
+    if os.path.exists(UPLOAD_FOLDER):
+        shutil.rmtree(UPLOAD_FOLDER)
 
-        global VECTOR_STORE_READY
-        VECTOR_STORE_READY = False
+    if os.path.exists("faiss_index"):
+        shutil.rmtree("faiss_index")
 
-        return jsonify({"message": "🧹 Cleanup successful. All uploaded files removed!"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    os.makedirs(UPLOAD_FOLDER)
+
+    return jsonify({"message": "Cleaned"})
 
 
 def auto_cleanup():
-    """Auto delete temp files when backend stops."""
-    # if os.path.exists(UPLOAD_FOLDER):
-    #     shutil.rmtree(UPLOAD_FOLDER)
-    if os.path.exists("faiss_multilang_index"):
-        shutil.rmtree("faiss_multilang_index")
-    print("🧹 Auto-cleanup complete — temporary data removed.")
+
+    if os.path.exists(UPLOAD_FOLDER):
+        shutil.rmtree(UPLOAD_FOLDER)
+
+    if os.path.exists("faiss_index"):
+        shutil.rmtree("faiss_index")
 
 
 atexit.register(auto_cleanup)
 
 
 if __name__ == "__main__":
-    print("Starting Talk2Books backend (multi-language, temp session mode)...")
+
+    print("🚀 Talk2Books server started")
+
     app.run(host="0.0.0.0", port=5000)
