@@ -105,7 +105,7 @@ def answer_question(question, question_lang="en", answer_lang="en"):
     # Use Ollama LLM to generate the answer
     llm = OllamaLLM(
     model="qwen2.5:3b",
-    base_url="http://ollama:11434"
+    base_url="http://localhost:11434"
 )
     prompt = f"Based on the following text, answer the question briefly:\n\n{context}\n\nQuestion: {translated_query}\nAnswer:"
 
