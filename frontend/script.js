@@ -1,121 +1,100 @@
-const LANG_MAP = {
-  en: "en",
-  hi: "hi",
-  pa: "pa",
-  english: "en",
-  hindi: "hi",
-  punjabi: "pa"
-};
+function mode(type){
 
-function normalizeLang(val) {
-  if (!val) return "";
-  const k = val.toString().trim().toLowerCase();
-  return LANG_MAP[k] || "";
+document.getElementById("docUpload").style.display="none"
+document.getElementById("youtubeInput").style.display="none"
+document.getElementById("webInput").style.display="none"
+
+if(type=="doc")
+document.getElementById("docUpload").style.display="block"
+
+if(type=="youtube")
+document.getElementById("youtubeInput").style.display="block"
+
+if(type=="website")
+document.getElementById("webInput").style.display="block"
+
 }
 
-async function uploadFiles() {
-  const files = document.getElementById("fileInput").files;
-  const status = document.getElementById("uploadStatus");
 
-  if (files.length === 0) {
-    alert("Please select at least one file!");
-    return;
-  }
-  if (files.length > 5) {
-    alert("You can upload a maximum of 5 files!");
-    return;
-  }
+async function uploadDocs(){
 
-  const formData = new FormData();
-  for (let i = 0; i < files.length; i++) {
-    formData.append(`file${i}`, files[i]);
-  }
+const files=document.getElementById("files").files
 
-  status.innerText = "⏳ Uploading...";
+let form=new FormData()
 
-  try {
-    const res = await fetch("http://localhost:5000/upload", {
-      method: "POST",
-      body: formData,
-    });
-    const data = await res.json();
+for(let i=0;i<files.length;i++){
 
-    if (res.ok) {
-      status.innerText = "✅ Uploaded Successfully!";
-      document.getElementById("lang-section").style.display = "block";
-      document.getElementById("chat-section").style.display = "block";
-      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
-    } else {
-      status.innerText = "❌ Upload Failed: " + (data.error || "Unknown error");
-    }
-  } catch (err) {
-    status.innerText = "❌ Upload Error: " + err.message;
-  }
+form.append("file"+i,files[i])
+
 }
 
-async function askQuestion() {
-  const question = document.getElementById("question").value.trim();
-  const rawQLang = document.getElementById("questionLang").value;
-  const rawALang = document.getElementById("answerLang").value;
-  const responseDiv = document.getElementById("response");
+await fetch("http://localhost:5000/upload",{
 
-  const questionLang = normalizeLang(rawQLang);
-  const answerLang = normalizeLang(rawALang);
+method:"POST",
+body:form
 
-  if (!question) {
-    alert("Please enter a question!");
-    return;
-  }
-  if (!questionLang || !answerLang) {
-    alert("Invalid language selection. Pick English / Hindi / Punjabi again.");
-    return;
-  }
+})
 
-  responseDiv.innerHTML = `
-    <div style="padding:10px;background:#0f172a;border-radius:8px;color:#facc15;">
-      💭 Thinking…<br>
-      <small>Sending → question_lang: <b>${questionLang}</b>, answer_lang: <b>${answerLang}</b></small>
-    </div>
-  `;
+alert("Documents processed")
 
-  try {
-    const res = await fetch("http://localhost:5000/ask", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        question,
-        question_lang: questionLang,
-        answer_lang: answerLang,
-      }),
-    });
+}
 
-    const data = await res.json();
 
-    if (res.ok && data.answer) {
-      const answerText = typeof data.answer === "string" ? data.answer : JSON.stringify(data.answer);
-      const sourceText = data.source ? `<br><br>📘 <b>Source:</b> ${data.source}` : "";
+async function processYoutube(){
 
-      responseDiv.innerHTML = `
-        <div style="padding:12px;background:#1e293b;border-radius:8px;color:#e2e8f0;">
-          <strong>🧾 Answer:</strong><br>${answerText}${sourceText}
-        </div>
-      `;
-    } else {
-      responseDiv.innerHTML = `
-        <div style="padding:12px;background:#1e293b;border-radius:8px;color:#f87171;">
-          ❌ ${data.error || "No relevant information found in the uploaded files."}
-        </div>
-      `;
-    }
+let url=document.getElementById("ytlink").value
 
-    // auto-scroll down when answer appears
-    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+await fetch("http://localhost:5000/youtube",{
 
-  } catch (err) {
-    responseDiv.innerHTML = `
-      <div style="padding:12px;background:#1e293b;border-radius:8px;color:#f87171;">
-        ⚠️ Network Error: ${err.message}
-      </div>
-    `;
-  }
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({url})
+
+})
+
+alert("YouTube processed")
+
+}
+
+
+async function processWebsite(){
+
+let url=document.getElementById("weblink").value
+
+await fetch("http://localhost:5000/website",{
+
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({url})
+
+})
+
+alert("Website processed")
+
+}
+
+
+async function ask(){
+
+let question=document.getElementById("question").value
+
+let qlang=document.getElementById("qlang").value
+let alang=document.getElementById("alang").value
+
+let res=await fetch("http://localhost:5000/ask",{
+
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+question,
+question_lang:qlang,
+answer_lang:alang
+})
+
+})
+
+let data=await res.json()
+
+document.getElementById("answer").innerText=data.answer
+
 }

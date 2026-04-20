@@ -1,49 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
+
 <head>
-  <meta charset="UTF-8">
-  <title>Talk2Books | Multilingual RAG</title>
-  <link rel="stylesheet" href="style.css">
+<title>Talk2Books</title>
+<link rel="stylesheet" href="style.css">
 </head>
+
 <body>
-  <div class="container">
-    <h1> Talk2Books</h1>
 
-    <!-- Step 1: Upload Section -->
-    <div id="upload-section">
-      <h3>Step 1 : Upload files</h3>
-      <input type="file" id="fileInput" multiple accept=".txt,.pdf,.docx" />
-      <button onclick="uploadFiles()">Upload</button>
-      <p id="uploadStatus"></p>
-    </div>
+<h1>Talk2Books</h1>
 
-    <!-- Step 2: Language Selection -->
-    <div id="lang-section" style="display:none;">
-      <h3>Step 2 : Choose Languages</h3>
-      <label>Question Language:</label>
-      <select id="questionLang">
-        <option value="en">English</option>
-        <option value="hi">Hindi</option>
-        <option value="pa">Punjabi</option>
-      </select>
+<h3>Select Input Type</h3>
 
-      <label>Answer Language:</label>
-      <select id="answerLang">
-        <option value="en">English</option>
-        <option value="hi">Hindi</option>
-        <option value="pa">Punjabi</option>
-      </select>
-    </div>
+<button onclick="mode('doc')">Document</button>
+<button onclick="mode('youtube')">YouTube</button>
+<button onclick="mode('website')">Website</button>
 
-    <!-- Step 3: Ask Question -->
-    <div id="chat-section" style="display:none;">
-      <h3>Step 3️ : Ask Your Question</h3>
-      <textarea id="question" placeholder="Type your question..." rows="3"></textarea>
-      <button onclick="askQuestion()">Ask</button>
-      <div id="response"></div>
-    </div>
-  </div>
+<div id="docUpload" style="display:none">
 
-  <script src="script.js"></script>
+<input type="file" id="files" multiple>
+<button onclick="uploadDocs()">Upload</button>
+
+</div>
+
+<div id="youtubeInput" style="display:none">
+
+<input type="text" id="ytlink">
+<button onclick="processYoutube()">Submit</button>
+
+</div>
+
+<div id="webInput" style="display:none">
+
+<input type="text" id="weblink">
+<button onclick="processWebsite()">Submit</button>
+
+</div>
+
+<hr>
+
+<label>Question Language</label>
+
+<select id="qlang">
+<option value="en">English</option>
+<option value="hi">Hindi</option>
+<option value="bn">Bengali</option>
+<option value="mr">Marathi</option>
+<option value="te">Telugu</option>
+<option value="ta">Tamil</option>
+<option value="gu">Gujarati</option>
+<option value="kn">Kannada</option>
+<option value="ml">Malayalam</option>
+<option value="pa">Punjabi</option>
+<option value="or">Odia</option>
+<option value="as">Assamese</option>
+<option value="ur">Urdu</option>
+</select>
+
+<label>Answer Language</label>
+
+<select id="alang">
+<option value="en">English</option>
+<option value="hi">Hindi</option>
+<option value="bn">Bengali</option>
+<option value="mr">Marathi</option>
+<option value="te">Telugu</option>
+<option value="ta">Tamil</option>
+<option value="gu">Gujarati</option>
+<option value="kn">Kannada</option>
+<option value="ml">Malayalam</option>
+<option value="pa">Punjabi</option>
+<option value="or">Odia</option>
+<option value="as">Assamese</option>
+<option value="ur">Urdu</option>
+</select>
+
+<br><br>
+
+<textarea id="question"></textarea>
+
+<button onclick="ask()">Ask Question</button>
+
+<div id="answer"></div>
+
+<script src="script.js"></script>
+
 </body>
 </html>

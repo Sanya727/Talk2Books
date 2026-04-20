@@ -17,7 +17,7 @@ def build_vector_store(docs):
 
     store.save_local(INDEX)
 
-    print("✅ FAISS index created")
+    print("FAISS index created")
 
 
 def load_store():
