@@ -45,13 +45,13 @@ def get_youtube_transcript(url):
 
                     transcript_text += f"\n\n[{lang}]\n{lang_text}"
 
-        print("✅ YouTube transcript extracted")
+        print("YouTube transcript extracted")
 
         return transcript_text
 
     except Exception as e:
 
-        print("❌ YouTube transcript failed:", e)
+        print("YouTube transcript failed:", e)
 
         return ""
 
@@ -73,12 +73,12 @@ def get_website_text(url):
         for p in paragraphs:
             text += p.get_text() + "\n"
 
-        print("✅ Website text extracted")
+        print("Website text extracted")
 
         return text
 
     except Exception as e:
 
-        print("❌ Website extraction failed:", e)
+        print("Website extraction failed:", e)
 
         return ""
