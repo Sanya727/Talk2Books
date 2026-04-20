@@ -36,7 +36,6 @@ async def upload_files():
 
     os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
-    # SAFE CLEANUP
     for f in os.listdir(UPLOAD_FOLDER):
         try:
             os.remove(os.path.join(UPLOAD_FOLDER, f))
@@ -164,6 +163,6 @@ atexit.register(auto_cleanup)
 
 if __name__ == "__main__":
 
-    print("🚀 Talk2Books server started")
+    print("Talk2Books server started")
 
     app.run(host="0.0.0.0", port=5000)
