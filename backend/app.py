@@ -121,11 +121,11 @@ async def ask_voice():
 
     await audio.save(audio_path)
 
-    print("🎤 Received voice question")
+    print("Received voice question")
 
     question_text = speech_to_text(audio_path)
 
-    print("🗣 Transcribed question:", question_text)
+    print("Transcribed question:", question_text)
 
     result = answer_question(question_text, question_lang, answer_lang)
 
@@ -168,7 +168,7 @@ def auto_cleanup():
     #     shutil.rmtree(UPLOAD_FOLDER)
     if os.path.exists("faiss_multilang_index"):
         shutil.rmtree("faiss_multilang_index")
-    print("🧹 Auto-cleanup complete — temporary data removed.")
+    print("Auto-cleanup complete : temporary data removed.")
 
 
 atexit.register(auto_cleanup)

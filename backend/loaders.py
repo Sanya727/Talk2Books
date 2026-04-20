@@ -4,14 +4,14 @@ from langchain_community.document_loaders import TextLoader, PyMuPDFLoader, Docx
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 
-# ✅ Function: detect language safely
+# to detect language safely
 def detect_language_safe(text):
     try:
         return detect(text)
     except:
         return "unknown"
 
-# ✅ Function: load and chunk all supported documents
+# to load and chunk all supported documents
 def load_documents(folder_path: str):
     all_docs = []
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
@@ -35,7 +35,7 @@ def load_documents(folder_path: str):
         try:
             docs = loader.load()
         except Exception as e:
-            print(f"❌ Error loading {file_name}: {e}")
+            print(f"Error loading {file_name}: {e}")
             continue
 
         # Split into chunks
@@ -47,8 +47,8 @@ def load_documents(folder_path: str):
             d.metadata["language"] = lang
             d.metadata["source"] = file_name
 
-        print(f"✅ Processed {file_name} | Detected language: {lang} | Chunks: {len(split_docs)}")
+        print(f"Processed {file_name} | Detected language: {lang} | Chunks: {len(split_docs)}")
         all_docs.extend(split_docs)
 
-    print(f"\n📚 Total document chunks loaded: {len(all_docs)}")
+    print(f"\n Total document chunks loaded: {len(all_docs)}")
     return all_docs
