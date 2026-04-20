@@ -1,14 +1,11 @@
 import os
 import shutil
-import atexit
-from quart import Quart, request, jsonify, send_from_directory
+from quart import Quart, request, jsonify
 from quart_cors import cors
 
-from loaders import load_documents
+from loaders import load_documents, load_documents_from_text
 from rag_chain import build_vector_store, answer_question
-
-from speech.stt import speech_to_text
-from speech.tts import text_to_speech
+from external_sources import get_youtube_transcript, get_website_text
 
 app = Quart(__name__)
 app = cors(app, allow_origin="*")
@@ -18,152 +15,95 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 VECTOR_READY = False
 
-ALLOWED_TYPES = (".txt", ".pdf", ".docx", ".pptx")
-
-
-@app.route("/audio/<filename>")
-async def serve_audio(filename):
-    return await send_from_directory(UPLOAD_FOLDER, filename)
-
 
 @app.route("/upload", methods=["POST"])
 async def upload_files():
 
     form = await request.files
 
-    if not form:
-        return jsonify({"error": "No files uploaded"}), 400
-
-    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-    # SAFE CLEANUP
-    for f in os.listdir(UPLOAD_FOLDER):
-        try:
-            os.remove(os.path.join(UPLOAD_FOLDER, f))
-        except:
-            pass
-
-    saved_files = []
+    saved = []
 
     for key, file in form.items():
-        filepath = os.path.join(UPLOAD_FOLDER, file.filename)
-        await file.save(filepath)
-        saved_files.append(file.filename)
 
-    if not saved_files:
-        return jsonify({"error": "No valid files uploaded"}), 400
+        path = os.path.join(UPLOAD_FOLDER, file.filename)
+
+        await file.save(path)
+
+        saved.append(file.filename)
 
     docs = load_documents(UPLOAD_FOLDER)
 
     if not docs:
-        return jsonify({"error": "No readable data found"}), 400
+        return jsonify({"error": "No readable documents"}), 400
 
     build_vector_store(docs)
 
     global VECTOR_READY
     VECTOR_READY = True
 
-    return jsonify({
-        "message": "Files processed successfully",
-        "files": saved_files
-    })
+    return jsonify({"message": "Documents indexed"})
+
+
+@app.route("/youtube", methods=["POST"])
+async def youtube():
+
+    data = await request.get_json()
+
+    url = data.get("url")
+
+    text = get_youtube_transcript(url)
+
+    if not text:
+        return jsonify({"error": "Transcript not available"}), 400
+
+    docs = load_documents_from_text(text, "youtube")
+
+    build_vector_store(docs)
+
+    global VECTOR_READY
+    VECTOR_READY = True
+
+    return jsonify({"message": "YouTube transcript indexed"})
+
+
+@app.route("/website", methods=["POST"])
+async def website():
+
+    data = await request.get_json()
+
+    url = data.get("url")
+
+    text = get_website_text(url)
+
+    docs = load_documents_from_text(text, "website")
+
+    build_vector_store(docs)
+
+    global VECTOR_READY
+    VECTOR_READY = True
+
+    return jsonify({"message": "Website indexed"})
 
 
 @app.route("/ask", methods=["POST"])
 async def ask():
 
     if not VECTOR_READY:
-        return jsonify({"error": "Upload files first"}), 400
+        return jsonify({"error": "No indexed data"}), 400
 
     data = await request.get_json()
 
     question = data.get("question")
+    question_lang = data.get("question_lang")
+    answer_lang = data.get("answer_lang")
 
-    q_lang = data.get("question_lang", "en")
-    a_lang = data.get("answer_lang", "en")
+    result = answer_question(question, question_lang, answer_lang)
 
-    result = answer_question(question, q_lang, a_lang)
-
-    answer_text = result["answer"]
-
-    audio_file = text_to_speech(answer_text, a_lang)
-
-    return jsonify({
-        "answer": answer_text,
-        "source": result["source"],
-        "audio_file": audio_file
-    })
-
-
-@app.route("/ask-voice", methods=["POST"])
-async def ask_voice():
-
-    if not VECTOR_READY:
-        return jsonify({"error": "Upload files first"}), 400
-
-    form = await request.form
-    files = await request.files
-
-    q_lang = form.get("question_lang", "en")
-    a_lang = form.get("answer_lang", "en")
-
-    if "audio" not in files:
-        return jsonify({"error": "Audio missing"}), 400
-
-    audio = files["audio"]
-
-    audio_path = os.path.join(UPLOAD_FOLDER, "voice_question.wav")
-
-    await audio.save(audio_path)
-
-    print("Voice question received")
-
-    question_text = speech_to_text(audio_path)
-
-    print("Transcribed:", question_text)
-
-    result = answer_question(question_text, q_lang, a_lang)
-
-    answer_text = result["answer"]
-
-    audio_file = text_to_speech(answer_text, a_lang)
-
-    return jsonify({
-        "question": question_text,
-        "answer": answer_text,
-        "source": result["source"],
-        "audio_file": audio_file
-    })
-
-
-@app.route("/cleanup", methods=["POST"])
-async def cleanup():
-
-    if os.path.exists(UPLOAD_FOLDER):
-        shutil.rmtree(UPLOAD_FOLDER)
-
-    if os.path.exists("faiss_index"):
-        shutil.rmtree("faiss_index")
-
-    os.makedirs(UPLOAD_FOLDER)
-
-    return jsonify({"message": "Cleaned"})
-
-
-def auto_cleanup():
-
-    if os.path.exists(UPLOAD_FOLDER):
-        shutil.rmtree(UPLOAD_FOLDER)
-
-    if os.path.exists("faiss_index"):
-        shutil.rmtree("faiss_index")
-
-
-atexit.register(auto_cleanup)
+    return jsonify(result)
 
 
 if __name__ == "__main__":
 
-    print("🚀 Talk2Books server started")
+    print("Server started")
 
     app.run(host="0.0.0.0", port=5000)

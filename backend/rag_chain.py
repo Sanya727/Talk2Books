@@ -1,9 +1,7 @@
 import os
-
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import OllamaLLM
-
 from deep_translator import GoogleTranslator
 
 INDEX = "faiss_index"
@@ -19,6 +17,8 @@ def build_vector_store(docs):
 
     store.save_local(INDEX)
 
+    print("✅ FAISS index created")
+
 
 def load_store():
 
@@ -33,48 +33,45 @@ def load_store():
     )
 
 
-def answer_question(question, q_lang="en", a_lang="en"):
+def translate(text, src, tgt):
+
+    try:
+        return GoogleTranslator(source=src, target=tgt).translate(text)
+    except:
+        return text
+
+
+def answer_question(question, question_lang, answer_lang):
 
     store = load_store()
 
-    try:
-        q_en = GoogleTranslator(source=q_lang, target="en").translate(question)
-    except:
-        q_en = question
+    if question_lang != "en":
+        question = translate(question, question_lang, "en")
 
     retriever = store.as_retriever(search_kwargs={"k": 3})
 
-    docs = retriever.invoke(q_en)
+    docs = retriever.invoke(question)
 
     context = "\n\n".join([d.page_content for d in docs])
 
     llm = OllamaLLM(model="qwen2.5:3b")
 
     prompt = f"""
-Use the context to answer the question.
+Answer based on context.
 
 Context:
 {context}
 
 Question:
-{q_en}
-
-Answer clearly.
+{question}
 """
 
     answer = llm.invoke(prompt)
 
-    if a_lang != "en":
-
-        try:
-            answer = GoogleTranslator(
-                source="en",
-                target=a_lang
-            ).translate(answer)
-        except:
-            pass
+    if answer_lang != "en":
+        answer = translate(answer, "en", answer_lang)
 
     return {
         "answer": answer,
-        "source": list(set([d.metadata["source"] for d in docs]))
+        "source": ", ".join([d.metadata["source"] for d in docs])
     }
