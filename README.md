@@ -20,41 +20,7 @@ The system retrieves relevant document chunks using **FAISS vector search** and 
 
 ---
 
-
-
-# Quick Start (Docker)
-The easiest way to run this project is using **Docker**, which automatically sets up all dependencies including the backend API and Ollama server.
-
-### 1) Install Docker Desktop
-Download from:  
-https://www.docker.com/products/docker-desktop
-
-### 2) Clone the repository
-
-git clone https://github.com/Sanya727/Talk2Books.git  
-cd Talk2Books
-
-### 3) Start the system
-
-docker compose up --build
-
-This will start:
-- Backend API
-- Ollama server
-
-### 4) Download the LLM model
-
-Open another terminal and run:
-docker exec -it talk2books_ollama ollama pull qwen2.5:3b
-
-### 5) Open the frontend
-
-Open the file:
-frontend/index.html
-in your browser and start asking questions.
-
-
-# Alternative: Run Without Docker
+# Quick Start
 ### 1) Create virtual environment
 
 python -m venv venv
