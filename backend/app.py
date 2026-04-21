@@ -10,7 +10,7 @@ from external_sources import get_youtube_transcript, get_website_text
 app = Quart(__name__)
 app = cors(app, allow_origin="*")
 
-UPLOAD_FOLDER = "sample_docs"
+UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 VECTOR_READY = False
