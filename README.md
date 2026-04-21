@@ -20,6 +20,8 @@ The system retrieves relevant document chunks using **FAISS vector search** and 
 
 ---
 
+
+
 # Quick Start (Docker)
 The easiest way to run this project is using **Docker**, which automatically sets up all dependencies including the backend API and Ollama server.
 
@@ -50,6 +52,34 @@ docker exec -it talk2books_ollama ollama pull qwen2.5:3b
 Open the file:
 frontend/index.html
 in your browser and start asking questions.
+
+
+Alternative: Run Without Docker
+1) Create virtual environment
+
+python -m venv venv
+venv\Scripts\activate
+
+2) Install dependencies
+
+pip install -r requirements.txt
+
+3) Run backend
+
+cd backend
+python app.py
+
+4) Start Ollama
+
+Make sure Ollama is running and model is installed:
+
+ollama run qwen2.5:3b
+
+5) Open frontend
+
+Open:
+
+frontend/index.html
 
 
 # Tech Stack
